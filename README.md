@@ -11,14 +11,16 @@ Assumptions including :
 
 ## Modify Project
 
-Copy or add maven `settings.xml` (by default stored on your `~/.m2/settings.xml`) file into project root directory. 
+Copy or add maven `settings.xml` (by default stored on your `~/.m2/settings.xml`) file into project root directory.
 
-Add `settings.xml` into project's `.gitignore` file, so no credentials leaked into github. This means all developers should copy or add this file manually.
+Add `settings.xml` into project's `.gitignore` file, so no credentials leaked into github.
 
 ```gitignore
 ## Maven Settings ##
 settings.xml
 ```
+
+> Ignoring `settings.xml` file means all developers should copy or add this file manually.
 
 Modify scm config element as following. This config enables us to use https for checking out code from github before building docker image and for release proses.
 
@@ -104,6 +106,42 @@ Then, add following plugin in pom file of rest-web module with intent to simplif
   </build>
 ```
 
+Last file to modify, change `logback-spring.xml` so that all logs will be appended into stdout or console (Better backup your current config file first).
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true">
+  <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+  <property resource="application.properties"/>
+  <property resource="bootstrap.properties" />
+
+  <springProperty scope="context" name="applicationName" source="spring.application.name"/>
+
+  <property name="CONSOLE_LOG_PATTERN"
+    value="%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}"/>
+  <property name="STDOUT_LOG_PATTERN"
+    value="[%level] %date{YYYY-MM-dd HH:mm:ss.SSS} [${applicationName}][%X{X-B3-TraceId:-}][%X{X-B3-SpanId:-}] [%thread] %logger{10} %msg%n" />
+
+  <appender class="ch.qos.logback.core.ConsoleAppender" name="STDOUT">
+    <encoder>
+      <pattern>${STDOUT_LOG_PATTERN}</pattern>
+    </encoder>
+  </appender>
+
+  <logger name="com.tiket.tix.train" level="DEBUG" additivity="false">
+    <appender-ref ref="STDOUT"/>
+  </logger>
+  <logger name="reactor.netty.http.client" level="TRACE" additivity="false">
+    <appender-ref ref="STDOUT"/>
+  </logger>
+
+  <root level="INFO">
+    <appender-ref ref="STDOUT"/>
+  </root>
+</configuration>
+```
+
 ## Create Dockerfile
 
 We use multistage docker build, each deploy environment (local, development and staging) using different stages determined by `BUILD_ENV` build-arg.
@@ -151,6 +189,16 @@ For building image in local or developer machine, run `mvn clean verify` first, 
 
 ```shell
 $ DOCKER_BUILDKIT=1 docker build -t containerize-spring-boot:latest --build-arg BUILD_ENV=local .
+```
+
+Verify built image, `docker image list`.
+
+## Running Image
+
+This section we will try to run the image. For simplicity reason, we will run it on Docker instead of kubernetes, rest assuring our image crafted correctly.
+
+```shell
+$ docker run --publish 8080:8080 containerize-spring-boot
 ```
 
 ## Create Jenkinsfile
