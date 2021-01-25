@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>2.3.8.RELEASE</version>
+  </parent>
+
+  <groupId>org.tiket.poc</groupId>
+  <artifactId>containerize-spring-boot</artifactId>
+  <packaging>pom</packaging>
+  <version>1.0.0-0-SNAPSHOT</version>
+
+  <modules>
+    <module>rest-web</module>
+  </modules>
+
+  <scm>
+    <connection>${git.scm.connection}</connection>
+    <developerConnection>${git.scm.developer-connection}</developerConnection>
+    <url>${git.scm.url}</url>
+    <tag>HEAD</tag>
+  </scm>
+
+  <distributionManagement>
+    <repository>
+      <id>central</id>
+      <name>localhost-releases</name>
+      <url>http://artifactoryms.tiket.com:8081/artifactory/libs-release-local</url>
+    </repository>
+    <snapshotRepository>
+      <id>snapshots</id>
+      <name>localhost-snapshots</name>
+      <url>http://artifactoryms.tiket.com:8081/artifactory/libs-snapshot-local</url>
+    </snapshotRepository>
+  </distributionManagement>
+
+  <properties>
+    <java.version>8</java.version>
+
+    <git.scm.connection>scm:git:git@github.com:tiket/containerize-spring-boot.git</git.scm.connection>
+    <git.scm.developer-connection>scm:git:git@github.com:tiket/containerize-spring-boot.git</git.scm.developer-connection>
+    <git.scm.url>https://github.com/tiket/containerize-spring-boot.git</git.scm.url>
+  </properties>
+
+  <profiles>
+    <profile>
+      <id>eleven</id>
+      <activation>
+        <jdk>11</jdk>
+      </activation>
+      <properties>
+        <java.version>11</java.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>docker</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <git.scm.connection>scm:git:https://github.com/tiket/TIX-TRAIN-TRANSACTION-BE.git</git.scm.connection>
+        <git.scm.developer-connection>scm:git:https://github.com/tiket/TIX-TRAIN-TRANSACTION-BE.git</git.scm.developer-connection>
+        <git.scm.url>https://github.com/tiket/TIX-TRAIN-TRANSACTION-BE.git</git.scm.url>
+      </properties>
+    </profile>
+  </profiles>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.tiket.poc</groupId>
+        <artifactId>rest-web</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+</project>

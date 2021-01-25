@@ -1,0 +1,32 @@
+podTemplate(
+  containers: [
+    containerTemplate(name: 'maven', image: 'maven:3.6.3-jdk-11', ttyEnabled: true, command: 'cat', args: '')
+  ],
+  volumes: [
+    persistentVolumeClaim(claimName: 'nfs-jenkins-storage-pvc', mountPath: '/var/maven/repository')
+  ],
+  serviceAccount: 'jenkins-service-account'
+)
+{
+  node(POD_LABEL) {
+    container('maven') {
+      checkout scm
+      stage('Build and Test') {
+        withSonarQubeEnv(installationName: 'tiket-sonar') {
+          configFileProvider([configFile(fileId: 'MAVEN_SETTINGS', variable: 'MAVEN_SETTINGS')]) {
+            sh "mvn -s ${MAVEN_SETTINGS} clean jacoco:prepare-agent install sonar:sonar"
+          }
+        }
+      }
+      stage("Quality Gate") {
+        timeout(time: 1, unit: 'MINUTES') {
+          sleep(45)
+            def qg = waitForQualityGate()
+              if (qg.status != 'OK') {
+                error "Pipeline aborted due to quality gate failure: ${qg.status}"
+              }
+        }
+      }
+    }
+  }
+}
