@@ -9,6 +9,8 @@ Assumptions including :
 - Your multi module maven project follows archetype structure which contains at least `rest-web` executable module.
 - Still using java 8.
 
+Another assumption, sample project name used here is `containerize-spring-boot`, hosted on org repo named `tiket`.
+
 ## Modify Project
 
 Copy or add maven `settings.xml` (by default stored on your `~/.m2/settings.xml`) file into project root directory.
@@ -35,7 +37,7 @@ Modify scm config element as following. This config enables us to use https for 
 
 Then add scm information into `<properties />` element, so it will be used as default config (Replacing placeholders in `<scm>` config element).
 
-> Please note, `tiket/containerize-spring-boot` is not exists, used here just for example.
+> Replace `tiket/containerize-spring-boot` with your project repo name.
 
 ```xml
   <properties>
@@ -49,6 +51,8 @@ Then add scm information into `<properties />` element, so it will be used as de
 ```
 
 Add following profiles in project's reactor/main `pom.xml` file
+
+> Replace `tiket/containerize-spring-boot` with your project repo name.
 
 ```xml
   <profiles>
@@ -75,7 +79,7 @@ Add following profiles in project's reactor/main `pom.xml` file
   </profiles>
 ```
 
-Please note, profile with name `eleven` just adding new properties to override `java.version` properties (from 8 to 11), activated/enabled by default when we use jdk11. Profile with name `docker` overrides properties for scm configuration, using github's https endpoint, add `-P docker` flag to activate this profile.
+Please note, profile with name `eleven` just adding new properties to override `java.version` properties (from 8 to 11), activated/enabled by default when we use jdk11. Profile with name `docker` overrides properties for scm configuration, using github's https endpoint, add `-P docker` flag to maven command to activate this profile, for example `mvn -P docker clean verify`
 
 Then, add following plugin in pom file of rest-web module with intent to simplify jar file copy when building image.
 
@@ -104,6 +108,19 @@ Then, add following plugin in pom file of rest-web module with intent to simplif
       </plugin>
     </plugins>
   </build>
+```
+
+Important, when your service runtime migrated from java 8 to 11 and using Jaxb API (Which is removed from standard jvm distributions), you need to add following artifacts into required module.
+
+```xml
+  <profiles>
+    <profile>
+      <id>eleven</id>
+      <dependencies>
+        
+      </dependencies>
+    </profile>
+  </profiles>
 ```
 
 Last file to modify, change `logback-spring.xml` so that all logs will be appended into stdout or console (Better backup your current config file first).
@@ -140,6 +157,12 @@ Last file to modify, change `logback-spring.xml` so that all logs will be append
     <appender-ref ref="STDOUT"/>
   </root>
 </configuration>
+```
+
+When you're done, verify all config correct, at least we can run following command successfully
+
+```shell
+$ mvn clean verify
 ```
 
 ## Create Dockerfile
@@ -193,6 +216,12 @@ $ DOCKER_BUILDKIT=1 docker build -t containerize-spring-boot:latest --build-arg 
 
 Verify built image, `docker image list`.
 
+### Build Using Kaniko
+
+This part is optional, just in case you need to simulate how image built on kubernetes.
+
+
+
 ## Running Image
 
 This section we will try to run the image. For simplicity reason, we will run it on Docker instead of kubernetes, rest assuring our image crafted correctly.
@@ -201,9 +230,29 @@ This section we will try to run the image. For simplicity reason, we will run it
 $ docker run --publish 8080:8080 containerize-spring-boot
 ```
 
+Following are some points need to be noted when run built images on your local machine.
+
+### Override Spring Boot Configs
+
+Simple way to set custom (or override configs inside `application.properties` packaged with your jar file) spring boot config is to set environment variables of your container. 
+
+For example to override mongodb hostname, `spring.mongodb.host`
+
+`docker run --publish 8080:8080 -e SPRING_MONGODB_HOST=192.168.1.123 containerize-spring-boot`
+
+In case you need to override multiple config lines, better approaches is by creating separate `application-docker.profiles` override required properties there then mount volume of config directory into your container.
+
+`docker run --publish 8080:8080 -v `pwd`/rest-web/src/main/resources:/app/configs -e SPRING_CONFIG_LOCATION=file:/app/configs -e SPRING_PROFILES_ACTIVE=docker containerize-spring-boot`
+
+> For details of externalizing spring boot configuration, please [read this official documentations]().
+
+### Connect to Host Services
+
+
+
 ## Create Jenkinsfile
 
-Before pushing your configuration to github, create new `Jenkinsfile.dev`
+Before pushing your configuration to github, create new `Jenkinsfile.dev` on your project root directory.
 
 ```
 podTemplate(
